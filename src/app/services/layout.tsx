@@ -1,0 +1,2 @@
+import { PanelShell } from '@/components/layout/PanelShell';
+export default function ServicesLayout({ children }: Readonly<{ children: React.ReactNode }>) { return <PanelShell title="Serviços">{children}</PanelShell>; }

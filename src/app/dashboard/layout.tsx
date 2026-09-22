@@ -1,0 +1,2 @@
+import { PanelShell } from '@/components/layout/PanelShell';
+export default function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) { return <PanelShell title="Painel">{children}</PanelShell>; }

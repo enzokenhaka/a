@@ -1,0 +1,2 @@
+import { PanelShell } from '@/components/layout/PanelShell';
+export default function AppointmentsLayout({ children }: Readonly<{ children: React.ReactNode }>) { return <PanelShell title="Agenda de Serviços">{children}</PanelShell>; }
