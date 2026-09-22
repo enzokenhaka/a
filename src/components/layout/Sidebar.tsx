@@ -144,12 +144,6 @@ export function Sidebar({
             </div>
           </nav>
 
-          <div className="shrink-0 border-t border-white/5 pt-4">
-            <div className="rounded-2xl border border-amber-400/10 bg-gradient-to-br from-amber-400/10 to-transparent p-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300">Atalho rápido</p>
-              <p className="mt-1 text-xs leading-5 text-zinc-500">Use o menu para trocar de módulo sem perder o contexto.</p>
-            </div>
-          </div>
         </div>
       </aside>
     </>

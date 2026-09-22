@@ -224,6 +224,14 @@ export default function LoginPage() {
             Criar conta
           </Link>
         </p>
+        <p className="mt-3 text-center text-sm text-gray-300">
+          <Link
+            href="/"
+            className="font-semibold text-[#FBC02D] transition hover:text-[#f7d36a] hover:underline"
+          >
+            Voltar para a página inicial
+          </Link>
+        </p>
       </div>
       {successToast && (
         <div className="fixed right-5 top-5 z-[60] rounded-xl border border-emerald-500/30 bg-emerald-950/90 px-4 py-3 text-sm font-semibold text-emerald-200 shadow-2xl" role="status">

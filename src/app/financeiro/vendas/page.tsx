@@ -11,8 +11,9 @@ type SaleRecord = {
   customer_name: string | null;
   total_amount: number;
   payment_method: string | null;
-  created_at: string;
+  created_at: string | null;
   status: string | null;
+  item_names: string[];
 };
 
 type ProductOption = {
@@ -39,6 +40,17 @@ const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
 });
+
+const formatSaleDate = (value: string | null | undefined) => {
+  if (!value) return "—";
+
+  const date = new Date(`${value.slice(0, 10)}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString("pt-BR");
+};
+const formatDirectSaleDescription = (customerName: string | null, itemNames: string[]) => {
+  const items = itemNames.filter(Boolean).join(", ");
+  return `Venda direta - ${customerName || "Cliente não informado"}${items ? ` - ${items}` : ""}`;
+};
 
 const paymentOptions = [
   { value: "PIX", label: "PIX" },
@@ -111,6 +123,22 @@ export default function SalesPage() {
 
       if (salesError) throw salesError;
 
+      const saleIds = (data || []).map((sale) => sale.id);
+      const { data: saleItemsData, error: saleItemsError } = saleIds.length
+        ? await supabase.from("sale_items").select("sale_id, description").in("sale_id", saleIds)
+        : { data: [], error: null };
+
+      if (saleItemsError) throw saleItemsError;
+
+      const itemNamesBySaleId = (saleItemsData || []).reduce<Record<string, string[]>>(
+        (itemsBySaleId, item) => {
+          if (!itemsBySaleId[item.sale_id]) itemsBySaleId[item.sale_id] = [];
+          if (item.description) itemsBySaleId[item.sale_id].push(item.description);
+          return itemsBySaleId;
+        },
+        {},
+      );
+
       const mapped = (data || []).map((sale) => ({
         id: sale.id,
         customer_name: sale.customer_name || "Cliente não informado",
@@ -118,6 +146,7 @@ export default function SalesPage() {
         payment_method: sale.payment_method || "PIX",
         created_at: sale.created_at,
         status: sale.status || "Pendente",
+        item_names: itemNamesBySaleId[sale.id] || [],
       })) as SaleRecord[];
 
       setRecords(mapped);
@@ -334,7 +363,7 @@ export default function SalesPage() {
       }
 
       const { error: financialError } = await supabase.from("financial_records").insert({
-        description: `Venda direta - ${resolvedCustomerName}`,
+        description: formatDirectSaleDescription(resolvedCustomerName, saleItems.map((item) => item.name)),
         value: Number(totalDirectSale) || 0,
         type: normalizeTransactionType("receita"),
         status: "Recebido",
@@ -418,11 +447,13 @@ export default function SalesPage() {
           <tbody>
             {filteredRecords.map((record) => (
               <tr key={record.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30">
-                <td className="px-6 py-4 font-semibold text-zinc-100">{record.customer_name}</td>
+                <td className="px-6 py-4 font-semibold text-zinc-100">
+                  {formatDirectSaleDescription(record.customer_name, record.item_names)}
+                </td>
                 <td className="px-6 py-4 font-bold text-white">{currency.format(record.total_amount)}</td>
                 <td className="px-6 py-4 text-zinc-300">{record.payment_method}</td>
                 <td className="px-6 py-4 text-zinc-400">
-                  {new Date(`${record.created_at}T00:00:00`).toLocaleDateString("pt-BR")}
+                  {formatSaleDate(record.created_at)}
                 </td>
                 <td className="px-6 py-4">
                   <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${statusClass(record.status)}`}>
