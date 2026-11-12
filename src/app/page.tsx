@@ -15,7 +15,6 @@ import {
   Menu,
   MessageCircle,
   Package,
-  Play,
   ShieldCheck,
   Sparkles,
   Star,
@@ -27,6 +26,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useShop } from '@/components/layout/shop-context';
+import { subscriptionPlans, type PlanId } from '@/lib/plans';
 
 const navItems = [
   { label: 'Funcionalidades', href: '#features' },
@@ -100,25 +100,19 @@ const testimonials = [
 
 const pricingPlans = [
   {
-    name: 'Iniciante',
-    monthly: 59,
-    annual: 49,
+    ...subscriptionPlans[0],
     description: 'Para barbearias em fase inicial de organização.',
     popular: false,
     features: ['Agenda e clientes', 'Financeiro básico', 'Relatórios mensais', 'Suporte por e-mail'],
   },
   {
-    name: 'Crescimento',
-    monthly: 99,
-    annual: 79,
+    ...subscriptionPlans[1],
     description: 'Ideal para negócios que querem crescer com consistência.',
     popular: true,
     features: ['Tudo do Iniciante', 'Gestão de equipe', 'Controle de estoque', 'WhatsApp e automações'],
   },
   {
-    name: 'Premium',
-    monthly: 169,
-    annual: 139,
+    ...subscriptionPlans[2],
     description: 'Para operações premium com múltiplas frentes e exigência.',
     popular: false,
     features: ['Tudo do Crescimento', 'Relatórios avançados', 'Múltiplas unidades', 'Suporte prioritário'],
@@ -127,24 +121,19 @@ const pricingPlans = [
 
 const faqs = [
   {
-    question: 'Posso migrar meus dados atuais para a plataforma?',
+    question: 'Quais serviços e recursos a plataforma oferece?',
     answer:
-      'Sim. Nossa equipe realiza migração de agendamentos, clientes e histórico com apoio de onboarding para não interromper seu fluxo de trabalho.',
+      'O Mister Manager OS reúne Agenda e Agendamentos, Gestão de Clientes, Controle de Estoque, Cadastro de Funcionários e um Financeiro completo, com Contas a Pagar e Contas a Receber.',
   },
   {
-    question: 'Como funciona o teste gratuito?',
+    question: 'Como faço para acessar o sistema?',
     answer:
-      'Você recebe 14 dias para testar todos os módulos principais, com acesso total e suporte para configurar sua barbearia em poucos passos.',
+      'Acesse sua conta pela página Entrar. Se ainda não tem uma conta, faça seu cadastro e use seus dados para entrar; depois, configure as informações da sua barbearia e da equipe.',
   },
   {
-    question: 'Existe integração com WhatsApp?',
+    question: 'Como funciona a cobrança dos planos?',
     answer:
-      'Sim. O sistema suporta mensagens automáticas, lembretes e confirmações de agendamento diretamente pelo WhatsApp da sua operação.',
-  },
-  {
-    question: 'Quem pode acessar a plataforma?',
-    answer:
-      'Você controla permissões por perfil, definindo quem acessa agenda, financeiro, estoque e relatórios de desempenho da equipe.',
+      'A seção Planos oferece opções mensal e anual. As assinaturas não exigem contrato de fidelidade; consulte os valores exibidos para cada modalidade e escolha o plano que melhor atende às necessidades da sua barbearia.',
   },
 ];
 
@@ -287,6 +276,7 @@ function DashboardMockup() {
 export default function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly');
+  const [selectedPlan, setSelectedPlan] = useState<PlanId | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const { shop } = useShop();
   const shopLogo = shop.logo_url || '/logo.png';
@@ -332,17 +322,11 @@ export default function HomePage() {
               <div className="hidden items-center gap-3 md:flex">
                 <Link
                   href="/login"
-                  className="rounded-full border border-zinc-700 bg-white/0 px-4 py-2 text-sm font-medium text-zinc-100 transition-all duration-200 hover:bg-white/5"
+                  className="rounded-full bg-[#FBBF24] px-4 py-2 text-sm font-bold text-zinc-900 transition-all duration-200 hover:bg-[#F59E0B]"
                   aria-label="Entrar"
                 >
                   Entrar
                 </Link>
-                <a
-                  href="#pricing"
-                  className="rounded-full bg-[#FBC02D] px-4 py-2 text-sm font-semibold text-zinc-900 transition-all duration-200 hover:bg-amber-300"
-                >
-                  Começar teste grátis
-                </a>
               </div>
 
               <button
@@ -370,13 +354,10 @@ export default function HomePage() {
                 <div className="grid gap-2 pt-2">
                   <Link
                     href="/login"
-                    className="rounded-xl border border-zinc-700 bg-white/0 px-4 py-2 text-center text-sm font-medium text-zinc-100"
+                    className="rounded-xl bg-[#FBBF24] px-4 py-2 text-center text-sm font-bold text-zinc-900 transition hover:bg-[#F59E0B]"
                   >
                     Entrar
                   </Link>
-                  <a href="#pricing" className="rounded-xl bg-[#FBC02D] px-4 py-2 text-center text-sm font-semibold text-zinc-900">
-                    Começar teste grátis
-                  </a>
                 </div>
               </div>
             ) : null}
@@ -401,21 +382,13 @@ export default function HomePage() {
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <a
-                  href="#pricing"
+                <Link
+                  href="/login"
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-[#FBC02D] px-6 py-3.5 text-sm font-semibold text-zinc-900 transition-all duration-200 hover:bg-amber-300"
                 >
-                  Começar grátis
+                  Entrar
                   <ArrowRight className="h-4 w-4" />
-                </a>
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-zinc-700 bg-[#111315] px-6 py-3.5 text-sm font-semibold text-zinc-100 transition-all duration-200 hover:bg-white/5"
-                  aria-label="Assistir demonstração"
-                >
-                  <Play className="h-4 w-4 fill-current" />
-                  Ver demonstração
-                </button>
+                </Link>
               </div>
 
               <div className="mt-8 flex flex-wrap items-center gap-4 text-xs text-zinc-500">
@@ -433,17 +406,9 @@ export default function HomePage() {
             <div className="relative">
               <div className="hero-glow absolute -right-10 -top-10 h-36 w-36 rounded-full bg-amber-400/10 blur-3xl" />
               <DashboardMockup />
-              <div className="float-soft absolute -bottom-5 -left-4 hidden w-52 overflow-hidden rounded-2xl border border-white/10 bg-[#111315]/90 p-2 shadow-2xl backdrop-blur-xl sm:block">
-                <div className="relative h-28 overflow-hidden rounded-xl">
-                  <img
-                    src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=700&q=85"
-                    alt="Ambiente profissional de uma barbearia"
-                    className="h-full w-full object-cover"
-                    loading="eager"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                  <span className="absolute bottom-2 left-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-white">Experiência premium</span>
-                </div>
+              <div className="float-soft absolute -bottom-5 -left-4 hidden w-52 rounded-2xl border border-white/10 bg-[#111315]/90 p-4 shadow-2xl backdrop-blur-xl sm:block">
+                <p className="text-xs leading-5 text-zinc-300">Ambiente profissional de uma barbearia</p>
+                <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-300">Experiência premium</p>
               </div>
             </div>
           </div>
@@ -574,52 +539,62 @@ export default function HomePage() {
           <div className="grid gap-5 lg:grid-cols-3">
             {pricingPlans.map((plan) => {
               const price = billing === 'monthly' ? plan.monthly : plan.annual;
+              const isSelected = selectedPlan === plan.id;
               return (
                 <article
                   key={plan.name}
-                  className={`rounded-2xl border p-6 ${
-                    plan.popular
-                      ? 'border-amber-500/60 bg-[#17191D] shadow-[0_0_24px_rgba(251,192,45,0.18)]'
-                      : 'border-zinc-800/70 bg-[#16191E]'
+                  className={`rounded-2xl border p-6 transition-all duration-200 ${
+                    isSelected
+                      ? 'border-amber-500 bg-[#17191D] ring-2 ring-amber-500 shadow-lg shadow-amber-500/20'
+                      : plan.popular
+                        ? 'border-amber-500/60 bg-[#17191D] shadow-[0_0_24px_rgba(251,192,45,0.18)]'
+                        : 'border-zinc-800/70 bg-[#16191E]'
                   }`}
                 >
-                  {plan.popular ? (
-                    <div className="mb-5 inline-flex rounded-full border border-amber-500/50 bg-amber-400/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-amber-300">
-                      Mais popular
-                    </div>
-                  ) : null}
-
-                  <div className="mb-6">
-                    <h3 className="text-2xl font-semibold text-zinc-100">{plan.name}</h3>
-                    <p className="mt-2 text-sm text-zinc-400">{plan.description}</p>
-                  </div>
-
-                  <div className="mb-6 flex items-end gap-2">
-                    <span className="text-4xl font-black text-white">R$ {price}</span>
-                    <span className="pb-1 text-sm text-zinc-400">/mês</span>
-                  </div>
-
-                  <ul className="space-y-3">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-center gap-3 text-sm text-zinc-300">
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400/10 text-amber-300">
-                          <Check className="h-3.5 w-3.5" />
-                        </span>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-
                   <button
                     type="button"
-                    className={`mt-8 w-full rounded-full px-4 py-3 text-sm font-semibold transition-all duration-200 ${
+                    onClick={() => setSelectedPlan(plan.id)}
+                    aria-pressed={isSelected}
+                    className="w-full text-left"
+                  >
+                    {plan.popular ? (
+                      <span className="mb-5 inline-flex rounded-full border border-amber-500/50 bg-amber-400/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-amber-300">
+                        Mais popular
+                      </span>
+                    ) : null}
+
+                    <span className="mb-6 block">
+                      <span className="block text-2xl font-semibold text-zinc-100">{plan.name}</span>
+                      <span className="mt-2 block text-sm text-zinc-400">{plan.description}</span>
+                    </span>
+
+                    <span className="mb-6 flex items-end gap-2">
+                      <span className="text-4xl font-black text-white">R$ {price}</span>
+                      <span className="pb-1 text-sm text-zinc-400">/mês</span>
+                    </span>
+
+                    <span className="block space-y-3">
+                      {plan.features.map((feature) => (
+                        <span key={feature} className="flex items-center gap-3 text-sm text-zinc-300">
+                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400/10 text-amber-300">
+                            <Check className="h-3.5 w-3.5" />
+                          </span>
+                          {feature}
+                        </span>
+                      ))}
+                    </span>
+                  </button>
+
+                  <Link
+                    href={`/checkout?plan=${plan.id}&billing=${billing}`}
+                    className={`mt-8 block w-full rounded-full px-4 py-3 text-center text-sm font-semibold transition-all duration-200 ${
                       plan.popular
                         ? 'bg-[#FBC02D] text-zinc-900 hover:bg-amber-300'
                         : 'border border-zinc-700 bg-zinc-900/70 text-zinc-100 hover:bg-white/5'
                     }`}
                   >
                     {plan.popular ? 'Começar teste grátis' : 'Escolher plano'}
-                  </button>
+                  </Link>
                 </article>
               );
             })}
@@ -687,13 +662,13 @@ export default function HomePage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <a href="#" aria-label="Instagram" className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-700 bg-[#111315] text-zinc-300 transition-all duration-200 hover:border-amber-400/50 hover:text-amber-300">
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-700 bg-[#111315] text-zinc-300 transition-all duration-200 hover:border-amber-400/50 hover:text-amber-300">
               <Instagram className="h-4 w-4" />
             </a>
-            <a href="#" aria-label="Facebook" className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-700 bg-[#111315] text-zinc-300 transition-all duration-200 hover:border-amber-400/50 hover:text-amber-300">
+            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-700 bg-[#111315] text-zinc-300 transition-all duration-200 hover:border-amber-400/50 hover:text-amber-300">
               <Facebook className="h-4 w-4" />
             </a>
-            <a href="#" aria-label="WhatsApp" className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-700 bg-[#111315] text-zinc-300 transition-all duration-200 hover:border-amber-400/50 hover:text-amber-300">
+            <a href="https://web.whatsapp.com" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-700 bg-[#111315] text-zinc-300 transition-all duration-200 hover:border-amber-400/50 hover:text-amber-300">
               <MessageCircle className="h-4 w-4" />
             </a>
           </div>

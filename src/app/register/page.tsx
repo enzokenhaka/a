@@ -5,12 +5,16 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight, Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { supabase } from '@/lib/supabase';
+import { isValidEmail } from '@/lib/auth-validation';
+import { subscriptionPlans } from '@/lib/plans';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
+  const [selectedPlan, setSelectedPlan] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
@@ -21,17 +25,32 @@ export default function RegisterPage() {
     event.preventDefault();
     setError('');
     setMessage('');
+    if (!isValidEmail(email)) { setError('Informe um e-mail válido.'); return; }
     if (password.length < 6) { setError('A senha deve ter pelo menos 6 caracteres.'); return; }
     if (password !== confirmation) { setError('As senhas não conferem.'); return; }
     setLoading(true);
-    const { data, error: authError } = await supabase.auth.signUp({ email, password });
+    const { data, error: authError } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: { data: { full_name: name.trim() } },
+    });
     if (authError) {
       setError(authError.message);
       setLoading(false);
       return;
     }
     if (data.session) {
-      router.push('/login');
+      if (selectedPlan) {
+        sessionStorage.setItem('checkout-registration', JSON.stringify({ name: name.trim(), email: email.trim() }));
+        router.push(`/checkout?plan=${selectedPlan}&step=payment`);
+      } else {
+        router.push('/login');
+      }
+      return;
+    }
+    if (selectedPlan) {
+      sessionStorage.setItem('checkout-registration', JSON.stringify({ name: name.trim(), email: email.trim() }));
+      router.push(`/checkout?plan=${selectedPlan}&step=payment`);
       return;
     }
     setMessage('Cadastro realizado. Verifique seu e-mail para confirmar a conta.');
@@ -53,18 +72,43 @@ export default function RegisterPage() {
 
         <form onSubmit={submit} className="space-y-5">
           <div>
+            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Nome completo</label>
+            <input
+              required
+              autoComplete="name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              className="w-full rounded-xl border border-white/5 bg-[#1B1C1E] px-3 py-3 text-sm text-white outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
+            />
+          </div>
+          <div>
             <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">E-mail</label>
             <div className="relative flex items-center gap-3 rounded-xl border border-white/5 bg-[#1B1C1E] px-3 py-3 pr-11 transition-all duration-200 focus-within:border-amber-400 focus-within:ring-2 focus-within:ring-amber-400/20">
               <Mail className="h-4 w-4 text-[#FBC02D]" />
               <input
                 required
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="Seu@email.com"
                 className="w-full border-0 bg-transparent text-sm text-white placeholder:text-gray-500 focus:outline-none"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Plano (opcional)</label>
+            <select
+              value={selectedPlan}
+              onChange={(event) => setSelectedPlan(event.target.value)}
+              className="w-full rounded-xl border border-white/5 bg-[#1B1C1E] px-3 py-3 text-sm text-white outline-none focus:border-amber-400"
+            >
+              <option value="">Escolha depois</option>
+              {subscriptionPlans.map((plan) => (
+                <option key={plan.id} value={plan.id}>{plan.name}</option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -89,7 +133,7 @@ export default function RegisterPage() {
 
           <div>
             <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Confirmar senha</label>
-            <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-[#1B1C1E] px-3 py-3 pr-11 transition-all duration-200 focus-within:border-amber-400 focus-within:ring-2 focus-within:ring-amber-400/20">
+            <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-[#1B1C1E] px-3 py-3 transition-all duration-200 focus-within:border-amber-400 focus-within:ring-2 focus-within:ring-amber-400/20">
               <Lock className="h-4 w-4 text-[#FBC02D]" />
               <div className="relative flex w-full items-center">
                 <input

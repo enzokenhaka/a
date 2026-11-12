@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useCurrentProfile } from "@/components/layout/PanelShell";
 import { useShop } from "@/components/layout/shop-context";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import { isPlanId, subscriptionPlans, type PlanId } from "@/lib/plans";
 
 const inputClass =
   "mt-2 w-full rounded-xl border border-white/5 bg-[#1B1C1E] px-3.5 py-3 text-sm text-zinc-100 outline-none transition focus:border-amber-400";
@@ -17,6 +18,18 @@ const formatRole = (role?: string | null) => {
     return "Administrador";
   }
   return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
+};
+
+type Subscription = {
+  plan_id: PlanId;
+  status: "active" | "cancelled";
+  renewal_date: string | null;
+};
+
+const formatRenewalDate = (value: string | null) => {
+  if (!value) return "Não informada";
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? "Não informada" : date.toLocaleDateString("pt-BR");
 };
 
 export default function ProfilePage() {
@@ -38,6 +51,11 @@ export default function ProfilePage() {
   const [shopLogoUrl, setShopLogoUrl] = useState("/logo.png");
   const [shopSettingsId, setShopSettingsId] = useState<string | null>(null);
   const [savingShopSettings, setSavingShopSettings] = useState(false);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
+  const [subscriptionFeedback, setSubscriptionFeedback] = useState("");
+  const [subscriptionBusy, setSubscriptionBusy] = useState(false);
+  const [planModalOpen, setPlanModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const profile = useCurrentProfile();
@@ -69,6 +87,53 @@ export default function ProfilePage() {
 
     void loadShopSettings();
   }, []);
+
+  useEffect(() => {
+    if (!profile) return;
+    if (!isSupabaseConfigured) {
+      setSubscriptionFeedback("Configuração do Supabase indisponível.");
+      setSubscriptionLoading(false);
+      return;
+    }
+    let active = true;
+
+    const loadSubscription = async () => {
+      setSubscriptionLoading(true);
+      setSubscriptionFeedback("");
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .select("plan_id, status, renewal_date")
+        .eq("user_id", profile.id)
+        .maybeSingle();
+
+      if (!active) return;
+      if (error) {
+        setSubscriptionFeedback(`Não foi possível carregar o plano: ${error.message}`);
+      } else if (data) {
+        if (
+          isPlanId(data.plan_id) &&
+          (data.status === "active" || data.status === "cancelled") &&
+          (data.renewal_date === null || typeof data.renewal_date === "string")
+        ) {
+          setSubscription({
+            plan_id: data.plan_id,
+            status: data.status,
+            renewal_date: data.renewal_date,
+          });
+        } else {
+          setSubscriptionFeedback("Os dados do plano têm um formato inválido.");
+        }
+      } else {
+        setSubscription(null);
+      }
+      setSubscriptionLoading(false);
+    };
+
+    void loadSubscription();
+    return () => {
+      active = false;
+    };
+  }, [profile?.id]);
 
   const save = (message: string) => {
     setSaved(message);
@@ -115,6 +180,21 @@ export default function ProfilePage() {
       setConfirmPassword("");
     }
     setSavingChanges(false);
+  };
+  const cancelSubscription = async () => {
+    if (!window.confirm("Deseja cancelar seu plano atual?")) return;
+    setSubscriptionBusy(true);
+    setSubscriptionFeedback("");
+    const { data, error } = await supabase.rpc("cancel_my_subscription");
+    if (error) {
+      setSubscriptionFeedback(`Não foi possível cancelar o plano: ${error.message}`);
+    } else if (!data) {
+      setSubscriptionFeedback("Não há um plano ativo para cancelar.");
+    } else {
+      setSubscription((current) => current ? { ...current, status: "cancelled" } : current);
+      setSubscriptionFeedback("Plano cancelado.");
+    }
+    setSubscriptionBusy(false);
   };
   const handleSaveBranding = async () => {
     if (!isSupabaseConfigured) {
@@ -269,6 +349,60 @@ export default function ProfilePage() {
           </button>
         </aside>
         <div className="space-y-6">
+          <section className="rounded-xl bg-[#1F1F1F] p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h3 className="text-base font-semibold text-white">Meu Plano</h3>
+                <p className="mt-1 text-xs text-gray-500">Status e gerenciamento da assinatura</p>
+              </div>
+              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                subscription?.status === "active"
+                  ? "bg-emerald-500/10 text-emerald-300"
+                  : "bg-zinc-700/60 text-zinc-300"
+              }`}>
+                {subscriptionLoading ? "Carregando..." : subscription?.status === "active" ? "Ativo" : subscription?.status === "cancelled" ? "Cancelado" : subscriptionFeedback ? "Indisponível" : "Sem plano"}
+              </span>
+            </div>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div>
+                <p className="text-xs text-gray-500">Plano</p>
+                <p className="mt-1 text-sm font-semibold text-white">
+                  {subscriptionPlans.find((plan) => plan.id === subscription?.plan_id)?.name ?? "Nenhum plano ativo"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Renovação</p>
+                <p className="mt-1 text-sm font-semibold text-white">
+                  {subscription?.status === "active" ? formatRenewalDate(subscription.renewal_date) : "—"}
+                </p>
+              </div>
+            </div>
+            {subscriptionFeedback && (
+              <p role="status" className="mt-4 rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-300">
+                {subscriptionFeedback}
+              </p>
+            )}
+            <div className="mt-5 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => setPlanModalOpen(true)}
+                className="rounded-lg bg-[#FBBF24] px-4 py-2.5 text-sm font-semibold text-zinc-900 transition hover:bg-[#F59E0B]"
+              >
+                Mudar de Plano
+              </button>
+              {subscription?.status === "active" && (
+                <button
+                  type="button"
+                  disabled={subscriptionBusy}
+                  onClick={() => void cancelSubscription()}
+                  className="rounded-lg border border-red-500/40 px-4 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {subscriptionBusy ? "Cancelando..." : "Cancelar Plano"}
+                </button>
+              )}
+            </div>
+          </section>
+
           <section className="rounded-xl bg-[#1F1F1F] p-6">
             <h3 className="mb-4 text-base font-semibold text-white">
               Dados pessoais
@@ -461,6 +595,35 @@ export default function ProfilePage() {
           </section>
         </div>
       </div>
+      {planModalOpen && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setPlanModalOpen(false);
+          }}
+        >
+          <div className="w-full max-w-md rounded-2xl border border-zinc-700 bg-[#16191E] p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white">Escolha um plano</h3>
+              <button type="button" onClick={() => setPlanModalOpen(false)} aria-label="Fechar" className="text-zinc-400 hover:text-white">×</button>
+            </div>
+            <p className="mt-2 text-sm text-zinc-400">Você continuará no checkout para revisar a opção escolhida.</p>
+            <div className="mt-5 space-y-3">
+              {subscriptionPlans.map((plan) => (
+                <button
+                  key={plan.id}
+                  type="button"
+                  onClick={() => router.push(`/checkout?plan=${plan.id}&step=payment`)}
+                  className="flex w-full items-center justify-between rounded-xl border border-zinc-700 bg-zinc-900/60 px-4 py-3 text-left transition hover:border-amber-400/60"
+                >
+                  <span className="font-semibold text-white">{plan.name}</span>
+                  <span className="text-sm text-zinc-400">R$ {plan.monthly}/mês</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,19 +1,11 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { supabase } from "@/lib/supabase";
-
-const formatPhone = (value: string) => {
-  const digits = value.replace(/\D/g, "").slice(0, 11);
-  if (digits.length <= 2) return digits ? `(${digits}` : "";
-  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  if (digits.length <= 10)
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-};
+import { isValidEmail } from "@/lib/auth-validation";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,7 +17,8 @@ export default function LoginPage() {
   const [showRecovery, setShowRecovery] = useState(false);
   const [recoveryStep, setRecoveryStep] = useState<1 | 2>(1);
   const [recoveryEmail, setRecoveryEmail] = useState("");
-  const [recoveryPhone, setRecoveryPhone] = useState("");
+  const [recoveryToken, setRecoveryToken] = useState("");
+  const [recoveryLinkVerified, setRecoveryLinkVerified] = useState(false);
   const [recoveryPassword, setRecoveryPassword] = useState("");
   const [recoveryConfirmation, setRecoveryConfirmation] = useState("");
   const [showRecoveryNewPassword, setShowRecoveryNewPassword] = useState(false);
@@ -34,6 +27,49 @@ export default function LoginPage() {
   const [recoveryError, setRecoveryError] = useState("");
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [successToast, setSuccessToast] = useState("");
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("recovery") !== "1") return;
+
+    const fragment = new URLSearchParams(window.location.hash.slice(1));
+    const code = url.searchParams.get("code");
+    const accessToken = fragment.get("access_token");
+    const refreshToken = fragment.get("refresh_token");
+    if (!code && (fragment.get("type") !== "recovery" || accessToken === null || refreshToken === null)) return;
+    window.history.replaceState(null, "", `${window.location.pathname}?recovery=1`);
+
+    const finishRecoveryLink = async () => {
+      const sessionResult = code
+        ? await supabase.auth.exchangeCodeForSession(code)
+        : accessToken && refreshToken
+          ? await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            })
+          : null;
+      if (!sessionResult) return;
+      const { error: sessionError } = sessionResult;
+      if (sessionError) {
+        setRecoveryError(sessionError.message);
+        return;
+      }
+
+      const { data, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        setRecoveryError(userError.message);
+        return;
+      }
+
+      setRecoveryEmail(data.user.email || "");
+      setRecoveryLinkVerified(true);
+      setRecoveryStep(2);
+      setRecoveryMessage("Link verificado. Defina sua nova senha.");
+      setShowRecovery(true);
+    };
+
+    void finishRecoveryLink();
+  }, []);
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -53,6 +89,8 @@ export default function LoginPage() {
   const openRecovery = () => {
     setRecoveryStep(1);
     setRecoveryEmail(email);
+    setRecoveryToken("");
+    setRecoveryLinkVerified(false);
     setRecoveryMessage("");
     setRecoveryError("");
     setShowRecovery(true);
@@ -63,29 +101,22 @@ export default function LoginPage() {
     setRecoveryError("");
     setRecoveryMessage("");
     const normalizedEmail = recoveryEmail.trim().toLowerCase();
-    const normalizedPhone = recoveryPhone.replace(/\D/g, "");
-    const { data: profiles, error: profileError } = await supabase
-      .from("profiles")
-      .select("email, phone")
-      .ilike("email", normalizedEmail)
-      .limit(10);
-    if (profileError || !profiles?.length) {
-      setRecoveryError("Este e-mail não está cadastrado em nosso sistema.");
+    if (!isValidEmail(normalizedEmail)) {
+      setRecoveryError("Informe um e-mail válido.");
       setRecoveryLoading(false);
       return;
     }
-    const matchingProfile = profiles.find(
-      (profile) =>
-        String(profile.email || "").toLowerCase() === normalizedEmail &&
-        String(profile.phone || "").replace(/\D/g, "") === normalizedPhone,
-    );
-    if (!matchingProfile) {
-      setRecoveryError("E-mail ou telefone incorretos.");
+    const { error: recoveryRequestError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+      redirectTo: `${window.location.origin}/login?recovery=1`,
+    });
+    if (recoveryRequestError) {
+      setRecoveryError(recoveryRequestError.message);
       setRecoveryLoading(false);
       return;
     }
+    setRecoveryEmail(normalizedEmail);
     setRecoveryStep(2);
-    setRecoveryMessage("Identidade confirmada. Defina sua nova senha.");
+    setRecoveryMessage("Se o e-mail estiver cadastrado, enviaremos um código de recuperação.");
     setRecoveryLoading(false);
   };
   const updateRecoveryPassword = async (
@@ -100,27 +131,38 @@ export default function LoginPage() {
       setRecoveryError("A nova senha deve ter pelo menos 6 caracteres.");
       return;
     }
+    if (!recoveryLinkVerified && !/^\d{6}$/.test(recoveryToken.trim())) {
+      setRecoveryError("Informe o código de recuperação de 6 dígitos.");
+      return;
+    }
     setRecoveryLoading(true);
     setRecoveryError("");
-    const response = await fetch("/api/auth/reset-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: recoveryEmail,
-        phone: recoveryPhone,
-        password: recoveryPassword,
-      }),
-    });
-    const result = (await response.json()) as { error?: string };
-    if (!response.ok) {
-      setRecoveryError(result.error || "Erro ao atualizar senha.");
-    } else {
-      setRecoveryPassword("");
-      setRecoveryConfirmation("");
-      setShowRecovery(false);
-      setSuccessToast("Senha alterada com sucesso!");
-      window.setTimeout(() => setSuccessToast(""), 3500);
+    setRecoveryMessage("");
+    if (!recoveryLinkVerified) {
+      const { error: verificationError } = await supabase.auth.verifyOtp({
+        email: recoveryEmail.trim().toLowerCase(),
+        token: recoveryToken.trim(),
+        type: "recovery",
+      });
+      if (verificationError) {
+        setRecoveryError(verificationError.message);
+        setRecoveryLoading(false);
+        return;
+      }
     }
+    const { error: updateError } = await supabase.auth.updateUser({ password: recoveryPassword });
+    if (updateError) {
+      setRecoveryError(updateError.message);
+      setRecoveryLoading(false);
+      return;
+    }
+    setRecoveryPassword("");
+    setRecoveryConfirmation("");
+    setRecoveryToken("");
+    setRecoveryLinkVerified(false);
+    setShowRecovery(false);
+    setSuccessToast("Senha alterada com sucesso!");
+    window.setTimeout(() => setSuccessToast(""), 3500);
     setRecoveryLoading(false);
   };
 
@@ -253,7 +295,7 @@ export default function LoginPage() {
                 </h2>
                 <p className="mt-1 text-xs text-gray-400">
                   {recoveryStep === 1
-                    ? "Confirme seus dados cadastrados"
+                    ? "Informe o e-mail cadastrado para receber um código"
                     : "Defina sua nova senha"}
                 </p>
               </div>
@@ -273,19 +315,9 @@ export default function LoginPage() {
                   <input
                     required
                     type="email"
+                    autoComplete="email"
                     value={recoveryEmail}
                     onChange={(event) => setRecoveryEmail(event.target.value)}
-                    className="mt-1.5 w-full rounded-xl border border-white/5 bg-[#1B1C1E] p-3 text-sm text-white outline-none focus:border-[#FBC02D]"
-                  />
-                </label>
-                <label className="block text-xs text-gray-400">
-                  Telefone cadastrado
-                  <input
-                    required
-                    inputMode="numeric"
-                    maxLength={15}
-                    value={recoveryPhone}
-                    onChange={(event) => setRecoveryPhone(formatPhone(event.target.value))}
                     className="mt-1.5 w-full rounded-xl border border-white/5 bg-[#1B1C1E] p-3 text-sm text-white outline-none focus:border-[#FBC02D]"
                   />
                 </label>
@@ -294,7 +326,7 @@ export default function LoginPage() {
                   type="submit"
                   className="w-full rounded-xl bg-[#FBC02D] px-4 py-3 text-sm font-bold text-[#0b0b0d] disabled:opacity-60"
                 >
-                  {recoveryLoading ? "Validando..." : "Continuar"}
+                  {recoveryLoading ? "Enviando..." : "Enviar código"}
                 </button>
               </form>
             ) : (
@@ -302,6 +334,21 @@ export default function LoginPage() {
                 onSubmit={updateRecoveryPassword}
                 className="mt-6 space-y-4"
               >
+                {!recoveryLinkVerified && (
+                  <label className="block text-xs text-gray-400">
+                    Código de 6 dígitos
+                    <input
+                      required
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      pattern="[0-9]{6}"
+                      maxLength={6}
+                      value={recoveryToken}
+                      onChange={(event) => setRecoveryToken(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                      className="mt-1.5 w-full rounded-xl border border-white/5 bg-[#1B1C1E] p-3 text-sm text-white outline-none focus:border-[#FBC02D]"
+                    />
+                  </label>
+                )}
                 <label className="block text-xs text-gray-400">
                   Nova senha
                   <div className="relative w-full">

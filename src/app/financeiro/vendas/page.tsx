@@ -36,6 +36,9 @@ type DirectSaleItem = {
   unitPrice: number;
 };
 
+const registeredCustomers = (rows: CustomerOption[]) =>
+  rows.filter((customer) => customer.name.trim().toLowerCase() !== "cliente avulso");
+
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
@@ -53,20 +56,12 @@ const formatDirectSaleDescription = (customerName: string | null, itemNames: str
 };
 
 const paymentOptions = [
-  { value: "PIX", label: "PIX" },
-  { value: "CARTAO_CREDITO", label: "Cartão de Crédito" },
-  { value: "CARTAO_DEBITO", label: "Cartão de Débito" },
-  { value: "DINHEIRO", label: "Dinheiro" },
-];
-
-const normalizePaymentMethod = (value: string) => {
-  const normalized = String(value || "").trim().toUpperCase();
-  if (normalized === "DINHEIRO") return "DINHEIRO";
-  if (normalized === "PIX") return "PIX";
-  if (normalized === "CARTAO_CREDITO" || normalized === "CARTÃO DE CRÉDITO") return "CARTAO_CREDITO";
-  if (normalized === "CARTAO_DEBITO" || normalized === "CARTÃO DE DÉBITO") return "CARTAO_DEBITO";
-  return normalized || "PIX";
-};
+  { value: "pix", databaseValue: "PIX", label: "PIX" },
+  { value: "credit_card", databaseValue: "CARTAO_CREDITO", label: "Cartão de Crédito" },
+  { value: "debit_card", databaseValue: "CARTAO_DEBITO", label: "Cartão de Débito" },
+  { value: "cash", databaseValue: "DINHEIRO", label: "Dinheiro" },
+] as const;
+type PaymentOption = (typeof paymentOptions)[number]["value"];
 
 const normalizeTransactionType = (value?: string | null) => {
   const normalized = String(value ?? "").trim().toUpperCase();
@@ -102,10 +97,9 @@ export default function SalesPage() {
   const [query, setQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [customerName, setCustomerName] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [selectedCustomerName, setSelectedCustomerName] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("PIX");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentOption>("pix");
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [selectedItemId, setSelectedItemId] = useState("");
@@ -191,12 +185,12 @@ export default function SalesPage() {
       if (customersQuery.error) {
         const fallbackQuery = await supabase.from("clients").select("id, name").order("name");
         if (fallbackQuery.error) throw fallbackQuery.error;
-        const nextCustomers = (fallbackQuery.data || []) as CustomerOption[];
+        const nextCustomers = registeredCustomers((fallbackQuery.data || []) as CustomerOption[]);
         setCustomers(nextCustomers);
         setSelectedCustomerId("");
         setSelectedCustomerName("");
       } else {
-        const nextCustomers = (customersQuery.data || []) as CustomerOption[];
+        const nextCustomers = registeredCustomers((customersQuery.data || []) as CustomerOption[]);
         setCustomers(nextCustomers);
         setSelectedCustomerId("");
         setSelectedCustomerName("");
@@ -289,10 +283,9 @@ export default function SalesPage() {
 
   const closeDirectSaleModal = () => {
     setModalOpen(false);
-    setCustomerName("");
     setSelectedCustomerId("");
     setSelectedCustomerName("");
-    setPaymentMethod("PIX");
+    setPaymentMethod("pix");
     setSelectedItemId("");
     setSelectedQuantity(1);
     setSaleItems([]);
@@ -300,6 +293,10 @@ export default function SalesPage() {
   };
 
   const saveDirectSale = async () => {
+    if (!selectedCustomerId || !selectedCustomerName.trim()) {
+      setError("Selecione um cliente cadastrado para concluir a venda.");
+      return;
+    }
     if (!saleItems.length) {
       setError("Adicione pelo menos um item para concluir a venda.");
       return;
@@ -308,15 +305,21 @@ export default function SalesPage() {
     setSaving(true);
     setError("");
 
-    const resolvedCustomerName = selectedCustomerName.trim() || customerName.trim() || "Cliente Avulso";
-    const normalizedPaymentMethod = normalizePaymentMethod(paymentMethod);
+    const resolvedCustomerName = selectedCustomerName.trim();
+    const paymentOption = paymentOptions.find((option) => option.value === paymentMethod);
+    if (!paymentOption) {
+      setError("Selecione uma forma de pagamento válida.");
+      setSaving(false);
+      return;
+    }
+    const paymentMethodEnum = paymentOption.databaseValue;
 
     try {
       const salePayload = {
         appointment_id: null,
         customer_name: resolvedCustomerName,
         total_amount: Number(totalDirectSale) || 0,
-        payment_method: normalizedPaymentMethod,
+        payment_method: paymentMethodEnum,
         status: "Concluído",
       };
 
@@ -368,7 +371,7 @@ export default function SalesPage() {
         type: normalizeTransactionType("receita"),
         status: "Recebido",
         category: "Venda de Produto",
-        payment_method: normalizedPaymentMethod,
+        payment_method: paymentMethodEnum,
         due_date: new Date().toISOString().slice(0, 10),
       });
 
@@ -502,17 +505,17 @@ export default function SalesPage() {
               <label className="text-sm text-zinc-300 md:col-span-2">
                 Cliente
                 <select
+                  required
                   value={selectedCustomerId}
                   onChange={(event) => {
                     const nextId = event.target.value;
                     const nextCustomer = customers.find((customer) => customer.id === nextId);
                     setSelectedCustomerId(nextId);
                     setSelectedCustomerName(nextCustomer?.name || "");
-                    setCustomerName(nextCustomer?.name || "");
                   }}
                   className="mt-2 bg-zinc-900 border border-zinc-800 text-zinc-100 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500 w-full"
                 >
-                  <option value="">Cliente Avulso</option>
+                  <option value="" disabled>Selecione um cliente</option>
                   {customers.map((customer) => (
                     <option key={customer.id} value={customer.id}>{customer.name}</option>
                   ))}
@@ -557,7 +560,10 @@ export default function SalesPage() {
                 Forma de pagamento
                 <select
                   value={paymentMethod}
-                  onChange={(event) => setPaymentMethod(event.target.value)}
+                  onChange={(event) => {
+                    const selected = paymentOptions.find((option) => option.value === event.target.value);
+                    if (selected) setPaymentMethod(selected.value);
+                  }}
                   className="mt-2 bg-zinc-900 border border-zinc-800 text-zinc-100 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-500 outline-none w-full"
                 >
                   {paymentOptions.map((option) => (
