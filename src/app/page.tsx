@@ -1,683 +1,138 @@
 'use client';
 
-import {
-  ArrowRight,
-  BarChart3,
-  BriefcaseBusiness,
-  CalendarCheck2,
-  Check,
-  CheckCircle2,
-  ChevronDown,
-  Clock3,
-  Facebook,
-  Instagram,
-  LayoutDashboard,
-  Menu,
-  MessageCircle,
-  Package,
-  ShieldCheck,
-  Sparkles,
-  Star,
-  TrendingUp,
-  Users,
-  X,
-} from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { ArrowDown, ArrowRight, BarChart3, CalendarDays, Check, ChevronDown, Instagram, Menu, Package, Users, Wallet, X } from 'lucide-react';
 import { useShop } from '@/components/layout/shop-context';
-import { subscriptionPlans, type PlanId } from '@/lib/plans';
+import { subscriptionPlans } from '@/lib/plans';
+import ClipperHero from '@/components/ClipperHero';
+import './landing.css';
 
-const navItems = [
-  { label: 'Funcionalidades', href: '#features' },
-  { label: 'Planos', href: '#pricing' },
-  { label: 'Depoimentos', href: '#testimonials' },
+const features = [
+  { icon: CalendarDays, index: '01', title: 'Agenda em ordem', text: 'Organize os horários por profissional, acompanhe os atendimentos do dia e mantenha a rotina da barbearia fluindo.' },
+  { icon: Users, index: '02', title: 'Clientes por perto', text: 'Consulte o histórico de visitas e mantenha as informações de cada cliente reunidas em um só lugar.' },
+  { icon: Wallet, index: '03', title: 'Financeiro claro', text: 'Acompanhe vendas, contas a pagar e a receber para entender como anda a operação.' },
+  { icon: Package, index: '04', title: 'Estoque sob controle', text: 'Cadastre produtos e acompanhe as quantidades para planejar a reposição.' },
 ];
 
-const featureCards = [
-  {
-    icon: CalendarCheck2,
-    title: 'Agendamento inteligente',
-    description:
-      'Visualize agenda diária e semanal por barbeiro, com bloqueios automáticos e gestão de tempo em tempo real.',
-  },
-  {
-    icon: TrendingUp,
-    title: 'Financeiro em tempo real',
-    description:
-      'Acompanhe saldo, receitas, contas a pagar e receber em uma visão clara e automatizada para decisões rápidas.',
-  },
-  {
-    icon: Users,
-    title: 'Clientes fidelizados',
-    description:
-      'Guarde histórico, preferências e informações de cada cliente para entregas mais personalizadas e recorrentes.',
-  },
-  {
-    icon: Package,
-    title: 'Estoque e PDV',
-    description:
-      'Controle pomadas, produtos e consumíveis com integração ao financeiro para faturamento e reposição em um clique.',
-  },
-  {
-    icon: BriefcaseBusiness,
-    title: 'Gestão de equipe',
-    description:
-      'Acompanhe performance, comissões e metas individuais de cada profissional para operação mais eficiente.',
-  },
+const plans = [
+  { ...subscriptionPlans[0], description: 'Uma opção direta para iniciar a organização.', popular: false },
+  { ...subscriptionPlans[1], description: 'Mais espaço para acompanhar a rotina.', popular: true },
+  { ...subscriptionPlans[2], description: 'Uma opção ampliada para sua operação.', popular: false },
 ];
 
-const stats = [
-  { value: '10k+', label: 'agendamentos confirmados' },
-  { value: '99.9%', label: 'tempo de atividade' },
-  { value: '5h/sem', label: 'economizadas em gestão financeira' },
-  { value: '4.9/5', label: 'avaliação média de clientes' },
+const platformModules = ['Agenda', 'Clientes', 'Equipe e serviços', 'Estoque', 'Financeiro'];
+
+const questions = [
+  ['O que posso gerenciar no Mister Manager OS?', 'Agenda, clientes, serviços, equipe, estoque e financeiro ficam reunidos em um único sistema para sua barbearia.'],
+  ['Como começo a usar?', 'Crie sua conta, configure os dados da barbearia e cadastre seus serviços e profissionais. Depois, entre para acompanhar a operação.'],
+  ['Posso trocar de plano?', 'Você pode escolher entre as opções mensal e anual na seção de planos. Os recursos de cada opção estão descritos nesta página.'],
 ];
-
-const testimonials = [
-  {
-    name: 'Victor Almeida',
-    shop: 'Mister Barber Studio',
-    quote:
-      'A plataforma eliminou a bagunça do financeiro e elevou a experiência dos nossos clientes. Hoje somos mais rápidos e mais organizados.',
-    avatar: 'VA',
-  },
-  {
-    name: 'Rafael Costa',
-    shop: 'Noir & Blade',
-    quote:
-      'Além da rotina, a visão de gestão por barbeiro me ajudou a aumentar produtividade e reduzir atrasos no atendimento.',
-    avatar: 'RC',
-  },
-  {
-    name: 'Diego Nunes',
-    shop: 'Dapper House',
-    quote:
-      'Nunca antes tive controle tão fácil da equipe, estoque e faturamento. O sistema vira parte da operação da barbearia.',
-    avatar: 'DN',
-  },
-];
-
-const pricingPlans = [
-  {
-    ...subscriptionPlans[0],
-    description: 'Para barbearias em fase inicial de organização.',
-    popular: false,
-    features: ['Agenda e clientes', 'Financeiro básico', 'Relatórios mensais', 'Suporte por e-mail'],
-  },
-  {
-    ...subscriptionPlans[1],
-    description: 'Ideal para negócios que querem crescer com consistência.',
-    popular: true,
-    features: ['Tudo do Iniciante', 'Gestão de equipe', 'Controle de estoque', 'WhatsApp e automações'],
-  },
-  {
-    ...subscriptionPlans[2],
-    description: 'Para operações premium com múltiplas frentes e exigência.',
-    popular: false,
-    features: ['Tudo do Crescimento', 'Relatórios avançados', 'Múltiplas unidades', 'Suporte prioritário'],
-  },
-];
-
-const faqs = [
-  {
-    question: 'Quais serviços e recursos a plataforma oferece?',
-    answer:
-      'O Mister Manager OS reúne Agenda e Agendamentos, Gestão de Clientes, Controle de Estoque, Cadastro de Funcionários e um Financeiro completo, com Contas a Pagar e Contas a Receber.',
-  },
-  {
-    question: 'Como faço para acessar o sistema?',
-    answer:
-      'Acesse sua conta pela página Entrar. Se ainda não tem uma conta, faça seu cadastro e use seus dados para entrar; depois, configure as informações da sua barbearia e da equipe.',
-  },
-  {
-    question: 'Como funciona a cobrança dos planos?',
-    answer:
-      'A seção Planos oferece opções mensal e anual. As assinaturas não exigem contrato de fidelidade; consulte os valores exibidos para cada modalidade e escolha o plano que melhor atende às necessidades da sua barbearia.',
-  },
-];
-
-function FeatureCard({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: typeof CalendarCheck2;
-  title: string;
-  description: string;
-}) {
-  return (
-    <article className="animate-rise group rounded-2xl border border-zinc-800/60 bg-[#16191E] p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] transition-all duration-300 hover:-translate-y-1 hover:border-amber-400/60 hover:shadow-[0_20px_60px_rgba(251,192,45,0.08)]">
-      <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-amber-400/10 text-amber-400 ring-1 ring-amber-400/20">
-        <Icon className="h-5 w-5" />
-      </div>
-      <h3 className="mb-3 text-xl font-semibold text-zinc-100">{title}</h3>
-      <p className="text-sm leading-6 text-zinc-400">{description}</p>
-    </article>
-  );
-}
-
-function DashboardMockup() {
-  return (
-    <div className="relative mx-auto w-full max-w-[560px] rounded-[28px] border border-zinc-700/60 bg-[#0F1115] p-3 shadow-[0_24px_80px_rgba(13,15,18,0.9)]">
-      <div className="absolute -left-12 top-14 h-32 w-32 rounded-full bg-amber-400/20 blur-3xl" />
-      <div className="absolute -right-16 bottom-6 h-40 w-40 rounded-full bg-zinc-700/40 blur-3xl" />
-      <div className="relative overflow-hidden rounded-[22px] border border-zinc-800 bg-[#12161B] p-4">
-        <div className="mb-4 flex items-center justify-between border-b border-zinc-800 pb-4">
-          <div className="flex items-center gap-2">
-            <div className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-            <div className="h-2.5 w-2.5 rounded-full bg-zinc-600" />
-            <div className="h-2.5 w-2.5 rounded-full bg-zinc-700" />
-          </div>
-          <div className="rounded-full border border-zinc-700 bg-zinc-900/80 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-zinc-300">
-            Painel
-          </div>
-        </div>
-
-        <div className="mb-4 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-zinc-800 bg-[#171B20] p-3">
-            <div className="mb-2 flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-              <LayoutDashboard className="h-3.5 w-3.5 text-amber-400" />
-              Receita
-            </div>
-            <div className="text-xl font-semibold text-zinc-100">R$ 18.4k</div>
-            <div className="mt-2 text-[11px] text-emerald-400">+12.4% vs mês</div>
-          </div>
-          <div className="rounded-xl border border-zinc-800 bg-[#171B20] p-3">
-            <div className="mb-2 flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-              <Clock3 className="h-3.5 w-3.5 text-amber-400" />
-              Hoje
-            </div>
-            <div className="text-xl font-semibold text-zinc-100">42 agend.</div>
-            <div className="mt-2 text-[11px] text-zinc-400">8 clientes em fila</div>
-          </div>
-          <div className="rounded-xl border border-zinc-800 bg-[#171B20] p-3">
-            <div className="mb-2 flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-              <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-              Retenção
-            </div>
-            <div className="text-xl font-semibold text-zinc-100">86%</div>
-            <div className="mt-2 text-[11px] text-zinc-400">Clientes ativos</div>
-          </div>
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-[1.3fr_0.9fr]">
-          <div className="rounded-2xl border border-zinc-800 bg-[#171B20] p-4">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">Próximos serviços</p>
-                <h4 className="mt-2 text-lg font-semibold text-zinc-100">Agenda do dia</h4>
-              </div>
-              <button className="rounded-full border border-zinc-700 bg-zinc-900 px-2 py-1 text-[10px] text-zinc-300">
-                + Novo
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {[
-                ['09:00', 'Corte + barba', 'Rafael', 'R$ 120'],
-                ['10:30', 'Barba premium', 'Mateus', 'R$ 90'],
-                ['12:15', 'Corte + hidratação', 'Lucas', 'R$ 150'],
-                ['15:00', 'Corte Executivo', 'João', 'R$ 110'],
-              ].map(([time, service, barber, price], index) => (
-                <div key={index} className="flex items-center justify-between rounded-xl border border-zinc-800 bg-[#14181D] p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-400/10 text-xs font-semibold text-amber-300">
-                      {time}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-zinc-100">{service}</p>
-                      <p className="text-xs text-zinc-500">{barber}</p>
-                    </div>
-                  </div>
-                  <span className="text-sm font-semibold text-zinc-200">{price}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-zinc-800 bg-[#171B20] p-4">
-            <div className="mb-4 flex items-center justify-between">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">Resumo</p>
-              <BarChart3 className="h-4 w-4 text-amber-400" />
-            </div>
-            <div className="space-y-3">
-              {[72, 64, 86, 92].map((value, index) => (
-                <div key={index}>
-                  <div className="mb-1 flex justify-between text-[11px] text-zinc-500">
-                    <span>{['R. Lucro', 'Vendas', 'Fidelização', 'Outros'][index]}</span>
-                    <span>{value}%</span>
-                  </div>
-                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-zinc-800">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-amber-400 to-yellow-200"
-                      style={{ width: `${value}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-5 rounded-xl border border-amber-400/30 bg-amber-400/5 p-3">
-              <div className="flex items-center gap-2 text-amber-300">
-                <CheckCircle2 className="h-4 w-4" />
-                <span className="text-xs font-medium uppercase tracking-[0.2em]">Meta</span>
-              </div>
-              <p className="mt-2 text-2xl font-semibold text-zinc-100">R$ 25,6k</p>
-              <p className="mt-1 text-[11px] text-zinc-400">Saldo estimado até o fim do mês</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly');
-  const [selectedPlan, setSelectedPlan] = useState<PlanId | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [scrolled, setScrolled] = useState(false);
   const { shop } = useShop();
   const shopLogo = shop.logo_url || '/logo.png';
   const shopName = shop.shop_name || 'Mister Manager OS';
 
+  useEffect(() => {
+    const revealItems = Array.from(document.querySelectorAll<HTMLElement>('.landing [data-reveal]'));
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (reducedMotion.matches || !('IntersectionObserver' in window)) {
+      revealItems.forEach((item) => item.classList.add('is-visible'));
+    } else {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -45px 0px' });
+      revealItems.forEach((item) => observer.observe(item));
+      return () => observer.disconnect();
+    }
+  }, []);
+
+  useEffect(() => {
+    const updateHeader = () => setScrolled(window.scrollY > 45);
+    updateHeader();
+    window.addEventListener('scroll', updateHeader, { passive: true });
+    return () => window.removeEventListener('scroll', updateHeader);
+  }, []);
+
   return (
-    <main className="min-h-screen bg-[#0D0F12] text-zinc-100">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <header className="sticky top-0 z-50 pb-4 pt-4">
-          <nav className="rounded-full border border-zinc-800/80 bg-[#0d0f12]/75 px-4 py-3 shadow-[0_12px_36px_rgba(0,0,0,0.25)] backdrop-blur-sm">
-            <div className="flex items-center justify-between gap-3">
-              <a href="#top" className="flex items-center gap-3" aria-label={`${shopName} home`}>
-                <Image
-                  src={shopLogo}
-                  alt={`${shopName} logo`}
-                  width={36}
-                  height={36}
-                  priority
-                  unoptimized
-                  className="h-9 w-9 rounded-full border border-white/10 bg-zinc-900/80 object-contain"
-                  onError={(event) => {
-                    event.currentTarget.src = '/logo.png';
-                    event.currentTarget.onerror = null;
-                  }}
-                />
-                <div>
-                  <div className="text-base font-semibold tracking-tight text-zinc-100">{shopName}</div>
-                </div>
-              </a>
+    <main className="landing">
+      <header className={scrolled ? 'landing-header is-scrolled' : 'landing-header'}>
+        <a className="landing-brand" href="#inicio" aria-label={`${shopName}, início`}>
+          <Image src={shopLogo} alt="" width={48} height={48} unoptimized />
+          <span>{shopName}<small>GESTÃO PARA BARBEARIAS</small></span>
+        </a>
+        <button className="landing-menu-button" type="button" onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}>{menuOpen ? <X /> : <Menu />}</button>
+        <nav className={menuOpen ? 'landing-nav is-open' : 'landing-nav'}>
+          <a href="#recursos" onClick={() => setMenuOpen(false)}>Recursos</a>
+          <a href="#sobre" onClick={() => setMenuOpen(false)}>O sistema</a>
+          <a href="#planos" onClick={() => setMenuOpen(false)}>Planos</a>
+          <Link className="landing-login" href="/login">Entrar <ArrowRight size={16} /></Link>
+        </nav>
+      </header>
 
-              <div className="hidden items-center gap-8 md:flex">
-                {navItems.map((item) => (
-                  <a
-                    key={item.label}
-                    href={item.href}
-                    className="text-sm text-zinc-300 transition-all duration-200 hover:text-amber-400"
-                  >
-                    {item.label}
-                  </a>
-                ))}
-              </div>
-
-              <div className="hidden items-center gap-3 md:flex">
-                <Link
-                  href="/login"
-                  className="rounded-full bg-[#FBBF24] px-4 py-2 text-sm font-bold text-zinc-900 transition-all duration-200 hover:bg-[#F59E0B]"
-                  aria-label="Entrar"
-                >
-                  Entrar
-                </Link>
-              </div>
-
-              <button
-                type="button"
-                className="inline-flex items-center justify-center rounded-full border border-zinc-700 bg-zinc-900/70 p-2 text-zinc-100 md:hidden"
-                onClick={() => setMenuOpen((value) => !value)}
-                aria-label="Abrir menu"
-              >
-                {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-              </button>
-            </div>
-
-            {menuOpen ? (
-              <div className="mt-4 space-y-3 border-t border-zinc-800 pt-4 md:hidden">
-                {navItems.map((item) => (
-                  <a
-                    key={item.label}
-                    href={item.href}
-                    className="block rounded-xl px-3 py-2 text-sm text-zinc-300 transition-all duration-200 hover:bg-white/5 hover:text-amber-400"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    {item.label}
-                  </a>
-                ))}
-                <div className="grid gap-2 pt-2">
-                  <Link
-                    href="/login"
-                    className="rounded-xl bg-[#FBBF24] px-4 py-2 text-center text-sm font-bold text-zinc-900 transition hover:bg-[#F59E0B]"
-                  >
-                    Entrar
-                  </Link>
-                </div>
-              </div>
-            ) : null}
-          </nav>
-        </header>
-
-        <section id="top" className="relative scroll-mt-28 overflow-hidden pb-16 pt-8 md:pt-16">
-          <div className="absolute inset-x-0 top-0 -z-10 h-[420px] bg-[radial-gradient(circle_at_top,_rgba(251,192,45,0.16),transparent_39%)]" />
-          <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
-            <div className="max-w-xl">
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/5 px-3 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-amber-300">
-                <Sparkles className="h-3.5 w-3.5" />
-                Sistema premium
-              </div>
-
-              <h1 className="text-4xl font-black tracking-[-0.05em] text-white sm:text-5xl lg:text-6xl">
-                Operação Mais Eficiente Para Sua Barbearia
-              </h1>
-
-              <p className="mt-6 max-w-lg text-lg leading-8 text-zinc-400">
-                Organize seus agendamentos, controle o financeiro em tempo real e gerencie sua equipe com a plataforma desenvolvida sob medida para o seu negócio.
-              </p>
-
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href="/login"
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#FBC02D] px-6 py-3.5 text-sm font-semibold text-zinc-900 transition-all duration-200 hover:bg-amber-300"
-                >
-                  Entrar
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-
-              <div className="mt-8 flex flex-wrap items-center gap-4 text-xs text-zinc-500">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                  Setup em 15 minutos
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                  Sem contrato fixo
-                </div>
-              </div>
-            </div>
-
-            <div className="relative">
-              <div className="hero-glow absolute -right-10 -top-10 h-36 w-36 rounded-full bg-amber-400/10 blur-3xl" />
-              <DashboardMockup />
-              <div className="float-soft absolute -bottom-5 -left-4 hidden w-52 rounded-2xl border border-white/10 bg-[#111315]/90 p-4 shadow-2xl backdrop-blur-xl sm:block">
-                <p className="text-xs leading-5 text-zinc-300">Ambiente profissional de uma barbearia</p>
-                <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-300">Experiência premium</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="pb-20 pt-2">
-          <div className="grid overflow-hidden rounded-[30px] border border-zinc-800/70 bg-[#14171B] lg:grid-cols-[1.05fr_.95fr]">
-            <div className="relative min-h-[300px] overflow-hidden">
-              <img
-                src="https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&w=1200&q=85"
-                alt="Barbeiro trabalhando em um ambiente moderno"
-                className="absolute inset-0 h-full w-full object-cover transition duration-700 hover:scale-105"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/15 via-black/20 to-[#14171B]" />
-              <div className="absolute bottom-5 left-5 rounded-xl border border-white/10 bg-black/45 px-3 py-2 text-xs font-medium text-white backdrop-blur-md">
-                Gestão que acompanha sua rotina
-              </div>
-            </div>
-            <div className="flex flex-col justify-center p-7 sm:p-10">
-              <p className="text-sm font-medium uppercase tracking-[0.2em] text-amber-300">Uma operação mais leve</p>
-              <h2 className="mt-3 text-3xl font-bold tracking-tight text-white">Menos cliques. Mais tempo para atender.</h2>
-              <p className="mt-4 max-w-xl text-sm leading-7 text-zinc-400">
-                Uma experiência pensada para você encontrar cada módulo rapidamente, acompanhar o que importa e voltar ao trabalho sem se perder em menus.
-              </p>
-              <div className="mt-6 flex flex-wrap gap-2 text-xs text-zinc-300">
-                {['Navegação rápida', 'Interface responsiva', 'Dados organizados', 'Feedback visual'].map((item) => (
-                  <span key={item} className="rounded-full border border-zinc-700 bg-zinc-900/70 px-3 py-2">{item}</span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="features" className="scroll-mt-28 px-0 pb-20 pt-6">
-          <div className="mb-10 text-center">
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-amber-300">Funcionalidades</p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Tudo o que sua barbearia precisa em uma plataforma
-            </h2>
-          </div>
-
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {featureCards.map((feature) => (
-              <FeatureCard key={feature.title} {...feature} />
-            ))}
-          </div>
-        </section>
-
-        <section className="pb-20">
-          <div className="rounded-[28px] border border-zinc-800/60 bg-[#16191E] p-6 sm:p-8">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {stats.map((stat) => (
-                <div key={stat.label} className="rounded-2xl border border-zinc-800 bg-[#121417] p-5">
-                  <div className="text-3xl font-black tracking-tight text-white">{stat.value}</div>
-                  <div className="mt-2 text-sm text-zinc-400">{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="testimonials" className="scroll-mt-28 pb-22">
-          <div className="mb-8 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium uppercase tracking-[0.2em] text-amber-300">Depoimentos</p>
-              <h2 className="mt-3 text-3xl font-bold tracking-tight text-white">Barbearias que cresceram com a Mister</h2>
-            </div>
-            <div className="hidden items-center gap-1 md:flex">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <Star key={index} className="h-4 w-4 fill-amber-400 text-amber-400" />
-              ))}
-            </div>
-          </div>
-
-          <div className="grid gap-5 lg:grid-cols-3">
-            {testimonials.map((person) => (
-              <article key={person.name} className="rounded-2xl border border-zinc-800/60 bg-[#16191E] p-6">
-                <div className="mb-5 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-amber-500 text-sm font-bold text-zinc-900">
-                      {person.avatar}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-zinc-100">{person.name}</div>
-                      <div className="text-sm text-zinc-500">{person.shop}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 text-amber-400">
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <Star key={index} className="h-4 w-4 fill-current" />
-                    ))}
-                  </div>
-                </div>
-                <p className="text-sm leading-7 text-zinc-300">“{person.quote}”</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section id="pricing" className="scroll-mt-28 pb-20 pt-4">
-          <div className="mb-10 text-center">
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-amber-300">Planos</p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-white">Escolha o plano ideal para seu negócio</h2>
-          </div>
-
-          <div className="mb-8 flex items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={() => setBilling('monthly')}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                billing === 'monthly' ? 'bg-[#FBC02D] text-zinc-900' : 'bg-zinc-800/80 text-zinc-300 hover:bg-zinc-700/80'
-              }`}
-            >
-              Mensal
-            </button>
-            <button
-              type="button"
-              onClick={() => setBilling('annual')}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                billing === 'annual' ? 'bg-[#FBC02D] text-zinc-900' : 'bg-zinc-800/80 text-zinc-300 hover:bg-zinc-700/80'
-              }`}
-            >
-              Anual
-            </button>
-          </div>
-
-          <div className="grid gap-5 lg:grid-cols-3">
-            {pricingPlans.map((plan) => {
-              const price = billing === 'monthly' ? plan.monthly : plan.annual;
-              const isSelected = selectedPlan === plan.id;
-              return (
-                <article
-                  key={plan.name}
-                  className={`rounded-2xl border p-6 transition-all duration-200 ${
-                    isSelected
-                      ? 'border-amber-500 bg-[#17191D] ring-2 ring-amber-500 shadow-lg shadow-amber-500/20'
-                      : plan.popular
-                        ? 'border-amber-500/60 bg-[#17191D] shadow-[0_0_24px_rgba(251,192,45,0.18)]'
-                        : 'border-zinc-800/70 bg-[#16191E]'
-                  }`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPlan(plan.id)}
-                    aria-pressed={isSelected}
-                    className="w-full text-left"
-                  >
-                    {plan.popular ? (
-                      <span className="mb-5 inline-flex rounded-full border border-amber-500/50 bg-amber-400/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-amber-300">
-                        Mais popular
-                      </span>
-                    ) : null}
-
-                    <span className="mb-6 block">
-                      <span className="block text-2xl font-semibold text-zinc-100">{plan.name}</span>
-                      <span className="mt-2 block text-sm text-zinc-400">{plan.description}</span>
-                    </span>
-
-                    <span className="mb-6 flex items-end gap-2">
-                      <span className="text-4xl font-black text-white">R$ {price}</span>
-                      <span className="pb-1 text-sm text-zinc-400">/mês</span>
-                    </span>
-
-                    <span className="block space-y-3">
-                      {plan.features.map((feature) => (
-                        <span key={feature} className="flex items-center gap-3 text-sm text-zinc-300">
-                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400/10 text-amber-300">
-                            <Check className="h-3.5 w-3.5" />
-                          </span>
-                          {feature}
-                        </span>
-                      ))}
-                    </span>
-                  </button>
-
-                  <Link
-                    href={`/checkout?plan=${plan.id}&billing=${billing}`}
-                    className={`mt-8 block w-full rounded-full px-4 py-3 text-center text-sm font-semibold transition-all duration-200 ${
-                      plan.popular
-                        ? 'bg-[#FBC02D] text-zinc-900 hover:bg-amber-300'
-                        : 'border border-zinc-700 bg-zinc-900/70 text-zinc-100 hover:bg-white/5'
-                    }`}
-                  >
-                    {plan.popular ? 'Começar teste grátis' : 'Escolher plano'}
-                  </Link>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="pb-20">
-          <div className="mx-auto max-w-4xl rounded-[28px] border border-zinc-800 bg-[#16191E] p-6 sm:p-8">
-            <div className="mb-8 text-center">
-              <p className="text-sm font-medium uppercase tracking-[0.2em] text-amber-300">FAQ</p>
-              <h2 className="mt-3 text-3xl font-bold tracking-tight text-white">Perguntas frequentes</h2>
-            </div>
-
-            <div className="space-y-3">
-              {faqs.map((faq, index) => {
-                const isOpen = openFaq === index;
-
-                return (
-                  <div key={faq.question} className="rounded-2xl border border-zinc-800 bg-[#111315]">
-                    <button
-                      type="button"
-                      className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left"
-                      onClick={() => setOpenFaq(isOpen ? null : index)}
-                      aria-expanded={isOpen}
-                    >
-                      <span className="font-medium text-zinc-100">{faq.question}</span>
-                      <ChevronDown className={`h-5 w-5 text-zinc-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    {isOpen ? <p className="px-4 pb-4 text-sm leading-7 text-zinc-400">{faq.answer}</p> : null}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <footer className="border-t border-zinc-800 bg-[#0D0F12]">
-        <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-10 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-          <div>
-            <div className="flex items-center gap-3">
-              <Image
-                src={shopLogo}
-                alt={`${shopName} logo`}
-                width={36}
-                height={36}
-                priority
-                unoptimized
-                className="h-9 w-9 rounded-full border border-white/10 bg-zinc-900/80 object-contain"
-                onError={(event) => {
-                  event.currentTarget.src = '/logo.png';
-                  event.currentTarget.onerror = null;
-                }}
-              />
-              <div className="text-base font-semibold text-zinc-100">{shopName}</div>
-            </div>
-            <p className="mt-3 max-w-md text-sm text-zinc-500">Gestão premium para barbearias modernas e profissionais que querem crescer com consistência.</p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-5 text-sm text-zinc-400">
-            <a href="#features" className="transition-all duration-200 hover:text-amber-300">Funcionalidades</a>
-            <a href="#pricing" className="transition-all duration-200 hover:text-amber-300">Planos</a>
-            <a href="#testimonials" className="transition-all duration-200 hover:text-amber-300">Depoimentos</a>
-            <a href="#" className="transition-all duration-200 hover:text-amber-300">Política de privacidade</a>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-700 bg-[#111315] text-zinc-300 transition-all duration-200 hover:border-amber-400/50 hover:text-amber-300">
-              <Instagram className="h-4 w-4" />
-            </a>
-            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-700 bg-[#111315] text-zinc-300 transition-all duration-200 hover:border-amber-400/50 hover:text-amber-300">
-              <Facebook className="h-4 w-4" />
-            </a>
-            <a href="https://web.whatsapp.com" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-700 bg-[#111315] text-zinc-300 transition-all duration-200 hover:border-amber-400/50 hover:text-amber-300">
-              <MessageCircle className="h-4 w-4" />
-            </a>
-          </div>
+      <section className="landing-hero" id="inicio">
+        <div className="landing-hero-image" role="img" aria-label="Interior acolhedor de uma barbearia" />
+        <div className="landing-hero-shade" />
+        <ClipperHero />
+        <div className="landing-hero-copy">
+          <p className="landing-kicker">A rotina da sua barbearia, em harmonia</p>
+          <h1>MAIS TEMPO<br />PARA O <em>OFÍCIO.</em></h1>
+          <p className="landing-lead">Agenda, equipe, clientes e financeiro em um só lugar. Uma gestão mais clara para você cuidar do que acontece na cadeira.</p>
+          <Link className="landing-button" href="/login">Conheça o sistema <ArrowRight size={18} /></Link>
         </div>
+        <a className="landing-scroll" href="#recursos"><span>Descubra o Mister Manager</span><ArrowDown size={16} /></a>
+        <div className="landing-hero-caption"><span>01 / 04</span><span>GESTÃO FEITA PARA BARBEARIAS</span></div>
+      </section>
 
-        <div className="mx-auto max-w-7xl border-t border-zinc-800 px-4 py-5 text-center text-sm text-zinc-500 sm:px-6 lg:px-8">
-          © 2026 Mister Manager OS. Todos os direitos reservados.
+      <section className="landing-intro" id="sobre">
+        <div className="landing-intro-image"><Image src="/barber-working.webp" alt="Barbeiro concentrado em seu trabalho" fill sizes="(max-width: 800px) 100vw, 48vw" /></div>
+        <div className="landing-intro-copy" data-reveal>
+          <p className="landing-kicker">A operação por trás de cada bom atendimento</p>
+          <h2>O cuidado começa <em>antes da cadeira.</em></h2>
+          <p>Quando a agenda está organizada e as informações estão à mão, sobra mais espaço para atender bem. O Mister Manager OS reúne as tarefas do dia a dia da barbearia em uma experiência simples de acompanhar.</p>
+          <a className="landing-text-link" href="#recursos">Explore os recursos <ArrowRight size={17} /></a>
+          <div className="landing-intro-note"><BarChart3 size={18} /><span>Uma visão completa da sua operação, de um só lugar.</span></div>
         </div>
-      </footer>
+      </section>
+
+      <section className="landing-features" id="recursos">
+        <div className="landing-section-heading" data-reveal><div><p className="landing-kicker">Um sistema, cada detalhe</p><h2>O essencial da gestão.<br /><em>Em boas mãos.</em></h2></div><p>Ferramentas para acompanhar a rotina, cuidar da equipe e tomar decisões com mais clareza.</p></div>
+        <div className="landing-feature-grid">{features.map(({ icon: Icon, index, title, text }) => <article className="landing-feature" data-reveal key={title}><span className="landing-feature-top"><Icon size={21} /><small>{index}</small></span><h3>{title}</h3><p>{text}</p><span className="landing-feature-rule" /></article>)}</div>
+      </section>
+
+      <section className="landing-story">
+        <div className="landing-story-photo"><Image src="/atelier-space.webp" alt="Espaço de barbearia preparado para receber clientes" fill sizes="100vw" /></div>
+        <div className="landing-story-copy" data-reveal><p className="landing-kicker">Da abertura ao fechamento</p><h2>Mais clareza para tocar <em>o seu negócio.</em></h2><p>Acompanhe agendamentos, pagamentos, serviços e equipe sem perder o ritmo do salão. As informações ficam organizadas para que você encontre o que precisa com facilidade.</p><Link className="landing-text-link" href="/register">Comece a organizar sua barbearia <ArrowRight size={17} /></Link></div>
+      </section>
+
+      <section className="landing-plans" id="planos">
+        <div className="landing-section-heading" data-reveal><div><p className="landing-kicker">Planos</p><h2>Um começo simples.<br /><em>Espaço para crescer.</em></h2></div><div className="landing-billing"><button type="button" aria-pressed={billing === 'monthly'} onClick={() => setBilling('monthly')}>Mensal</button><button type="button" aria-pressed={billing === 'annual'} onClick={() => setBilling('annual')}>Anual</button></div></div>
+        <div className="landing-plan-grid">{plans.map((plan) => <article key={plan.id} data-reveal className={`landing-plan${plan.popular ? ' is-popular' : ''}`}>
+          {plan.popular && <span className="landing-plan-badge">Mais escolhido</span>}
+          <p className="landing-plan-name">{plan.name}</p><p className="landing-plan-description">{plan.description}</p>
+          <p className="landing-plan-price"><strong>R$ {billing === 'monthly' ? plan.monthly : plan.annual}</strong><span>{billing === 'monthly' ? ' / mês' : ' / mês no anual'}</span></p>
+          <ul>{platformModules.map((feature) => <li key={feature}><Check size={16} />{feature}</li>)}</ul>
+          <Link href={`/checkout?plan=${plan.id}&billing=${billing}`} className="landing-plan-action">Criar conta <ArrowRight size={16} /></Link>
+        </article>)}</div>
+        <p className="landing-price-note" data-reveal>Os valores correspondem à tabela configurada no sistema. No anual, o preço é mostrado como equivalente mensal. Hoje, todos os planos compartilham os mesmos módulos e o checkout ainda não processa cobranças online.</p>
+      </section>
+
+      <section className="landing-faq">
+        <div data-reveal><p className="landing-kicker">Dúvidas frequentes</p><h2>Vamos deixar<br /><em>tudo claro.</em></h2></div>
+        <div className="landing-questions">{questions.map(([question, answer], index) => <article key={question} className="landing-question" data-reveal><button type="button" aria-expanded={openFaq === index} onClick={() => setOpenFaq(openFaq === index ? null : index)}><span>{question}</span><ChevronDown size={19} /></button>{openFaq === index && <p>{answer}</p>}</article>)}</div>
+      </section>
+
+      <footer className="landing-footer"><div className="landing-footer-main"><a className="landing-brand" href="#inicio"><Image src={shopLogo} alt="" width={48} height={48} unoptimized /><span>{shopName}<small>GESTÃO PARA BARBEARIAS</small></span></a><p>Organização para a rotina. Clareza para crescer.</p><Link className="landing-button" href="/login">Entrar no sistema <ArrowRight size={17} /></Link></div><div className="landing-footer-bottom"><span>© 2026 {shopName}. Todos os direitos reservados.</span><a href="#recursos">Recursos</a><a href="#planos">Planos</a><a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram size={18} /></a></div></footer>
     </main>
   );
 }
